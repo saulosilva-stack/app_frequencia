@@ -19,6 +19,9 @@ function Chamada() {
     new Date().toISOString().split('T')[0]
   )
 
+  const [observacoes, setObservacoes] = useState({})
+  const [alunoObservando, setAlunoObservando] = useState(null)
+
   // ================================
   // CARREGAMENTO
   // ================================
@@ -64,12 +67,17 @@ function Chamada() {
 
     const estadoInicial = {}
 
+    const obsInicial = {}
+
     alunosData.forEach((aluno) => {
       const registro = freqData.find((f) => f.ra === aluno.ra)
+
       estadoInicial[aluno.ra] = registro ? registro.presente : null
+      obsInicial[aluno.ra] = registro ? registro.observacao || '' : ''
     })
 
     setPresencas(estadoInicial)
+    setObservacoes(obsInicial)
   }
 
   // ================================
@@ -93,6 +101,12 @@ function Chamada() {
 
     const dataHoje = dataSelecionada
 
+    // =========================
+    // pegar usuário logado
+    // =========================
+    const { data: userData } = await supabase.auth.getUser()
+    const user = userData.user
+    
     for (const ra in presencas) {
 
       const valorFinal = presencas[ra] === null ? false : presencas[ra]
@@ -104,7 +118,9 @@ function Chamada() {
             ra,
             turma_id: turmaId,
             data_aula: dataHoje,
-            presente: valorFinal
+            presente: valorFinal,
+            responsavel: user.email,
+            observacao: observacoes[ra] || ''
           },
           {
             onConflict: ['ra', 'turma_id', 'data_aula']
@@ -169,11 +185,63 @@ function Chamada() {
           <span style={{ marginLeft: '8px' }}>
             {aluno.nome}
           </span>
+          <button
+            onClick={() => setAlunoObservando(aluno.ra)}
+            style={{ marginLeft: '10px' }}
+            >
+            📝
+          </button>
+          <button
+            onClick={() => navigate(`/aluno/${aluno.ra}`)}
+            style={{ marginLeft: '10px' }}
+          >
+            📊
+          </button>
         </div>
       ))}
 
       <br />
+      {alunoObservando && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 20,
+            borderRadius: 8,
+            width: 300
+          }}>
 
+            <h3>Observação</h3>
+
+            <textarea
+              value={observacoes[alunoObservando] || ''}
+              onChange={(e) =>
+                setObservacoes({
+                  ...observacoes,
+                  [alunoObservando]: e.target.value
+                })
+              }
+              style={{ width: '100%', height: 100 }}
+            />
+
+            <br /><br />
+
+            <button onClick={() => setAlunoObservando(null)}>
+              Salvar
+            </button>
+
+          </div>
+        </div>
+      )}
       <button
         onClick={() => {
           setBackupPresencas(presencas)

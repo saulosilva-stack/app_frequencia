@@ -128,7 +128,7 @@ function RelatorioBase({ titulo, dados, colunas }) {
               {/* render customizado */}
               {col.render
                 ? col.render(item)
-                : item[col.campo]
+                : item[col.campo] ?? '-'
               }
 
             </div>
