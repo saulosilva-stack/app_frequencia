@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useParams, useNavigate } from 'react-router-dom'
-import RelatorioBase from '../components/RelatorioBase'
+import RelatorioBaseTS from '../components/RelatorioBaseTS'
 
 function RelatorioAluno() {
 
   const { ra } = useParams()
   const navigate = useNavigate()
+  const [aluno, setAluno] = useState(null)
 
   const [dados, setDados] = useState([])
 
@@ -24,46 +25,64 @@ function RelatorioAluno() {
       alert('Erro ao carregar relatório')
       return
     }
-    console.log('DADOS BRUTOS:', data)
+
     setDados(data || [])
+
+    // buscar aluno
+    const { data: alunoData, error: alunoError } = await supabase
+      .from('alunos')
+      .select('nome, turma_id')
+      .eq('ra', ra)
+      .single()
+
+    if (alunoError) {
+      console.error(alunoError)
+      return
+    }
+
+    setAluno(alunoData)
   }
 
-    const colunas = [
-        {
-            campo: 'data_aula',
-            label: 'Data',
-        },
-        {
-            campo: 'presente',
-            label: 'Presença',
-            render: (item) => (item.presente ? 'Presente' : 'Faltou')
-        },
-        {
-            campo: 'observacao',
-            label: 'Observação',
-        },
-        {
-            campo: 'responsavel',
-            label: 'Responsável',
-        }
-    ]
+  const colunas = [
+      {
+          campo: 'data_aula',
+          label: 'Data',
+          tipo: 'data',
+      },
+      {
+          campo: 'presente',
+          label: 'Presença',
+          render: (item) => (item.presente ? 'Presente' : 'Faltou')
+      },
+      {
+          campo: 'observacao',
+          label: 'Observação',
+      },
+      {
+          campo: 'responsavel',
+          label: 'Responsável',
+      }
+  ]
 
-    return (
-        <div style={{ padding: 20 }}>
+  const titulo = aluno
+  ? `${aluno.nome} - RA: ${ra} - Turma: ${aluno.turma_id}`
+  : `Relatório do aluno ${ra}`
 
-            <button onClick={() => navigate(-1)}>
-            ← Voltar
-            </button>
+  return (
+      <div style={{ padding: 20 }}>
 
-            <h2>Relatório do aluno {ra}</h2>
+          <button onClick={() => navigate(-1)}>
+          ← Voltar
+          </button>
 
-            <RelatorioBase
+          <RelatorioBaseTS
+            titulo={titulo}
             dados={dados}
             colunas={colunas}
-            />
+          />
 
-        </div>
-    )
+      </div>
+  )
 }
 
 export default RelatorioAluno

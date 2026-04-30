@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useParams, useNavigate } from 'react-router-dom'
 import RelatorioBase from '../components/RelatorioBase'
+import RelatorioBaseTS from '../components/RelatorioBaseTS'
 
 function RelatorioFrequencia() {
 
@@ -59,7 +60,7 @@ function RelatorioFrequencia() {
         ← Voltar
       </button>
 
-      <RelatorioBase
+      <RelatorioBaseTS
         titulo={`Relatório ${turmaId}`}
         dados={dados}
         colunas={colunas}

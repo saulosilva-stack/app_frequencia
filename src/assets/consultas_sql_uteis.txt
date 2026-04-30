@@ -1,0 +1,102 @@
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_name = 'alunos';
+
+//--------------------------------------------------//
+
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_name = 'frequencia';
+
+//--------------------------------------------------//
+
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_name = 'turmas';
+
+//--------------------------------------------------//
+
+select
+  tc.constraint_name,
+  tc.constraint_type,
+  kcu.column_name
+from information_schema.table_constraints tc
+join information_schema.key_column_usage kcu
+  on tc.constraint_name = kcu.constraint_name
+where tc.table_name = 'frequencia';
+
+//--------------------------------------------------//
+
+select pg_get_functiondef(p.oid)
+from pg_proc p
+join pg_namespace n on p.pronamespace = n.oid
+where p.proname = 'relatorio_aluno';
+
+//--------------------------------------------------//
+
+select *
+from information_schema.table_constraints
+where table_name = 'frequencia'
+and constraint_type = 'UNIQUE';
+
+//--------------------------------------------------//
+
+alter table frequencia
+add constraint frequencia_unique
+unique (ra, turma_id, data_aula);
+
+//--------------------------------------------------//
+
+alter table frequencia
+add constraint frequencia_unique
+unique (ra, turma_id, data_aula);
+
+//--------------------------------------------------//
+
+# INFORMAÇÕES UTEIS PARA A IA: #
+
+table_name = 'frequencia'
+column_name,data_type,is_nullable
+id,uuid,NO
+ra,text,YES
+turma_id,text,YES
+data_aula,date,YES
+presente,boolean,YES
+responsavel,text,YES
+observacao,text,YES
+
+table_name = 'alunos'
+column_name,data_type,is_nullable
+ra,text,NO
+nome,text,YES
+sexo,text,YES
+turma_id,text,YES
+status,text,YES
+
+table_name = 'turmas'
+column_name,data_type,is_nullable
+id,text,NO
+abrev,text,YES
+turno,text,YES
+ensino,text,YES
+
+constraint_name,constraint_type,column_name
+frequencia_pkey,PRIMARY KEY,id
+frequencia_ra_fkey,FOREIGN KEY,ra
+frequencia_turma_id_fkey,FOREIGN KEY,turma_id
+
+pg_get_functiondef
+"CREATE OR REPLACE FUNCTION public.relatorio_aluno(ra_param text)
+ RETURNS TABLE(data_aula date, presente boolean, observacao text, responsavel text)
+ LANGUAGE sql
+AS $function$
+  select
+    f.data_aula,
+    f.presente,
+    f.observacao,
+    f.responsavel
+  from frequencia f
+  where f.ra = ra_param
+  order by f.data_aula desc;
+$function$
+"

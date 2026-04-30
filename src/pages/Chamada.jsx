@@ -106,9 +106,10 @@ function Chamada() {
     // =========================
     const { data: userData } = await supabase.auth.getUser()
     const user = userData.user
-    
-    for (const ra in presencas) {
+    console.log('OBSERVACOES:', observacoes)
 
+    for (const ra in presencas) {
+      console.log(ra, observacoes[ra])
       const valorFinal = presencas[ra] === null ? false : presencas[ra]
 
       const { error } = await supabase
@@ -120,7 +121,7 @@ function Chamada() {
             data_aula: dataHoje,
             presente: valorFinal,
             responsavel: user.email,
-            observacao: observacoes[ra] || ''
+            observacao: observacoes[String(ra)] ?? null
           },
           {
             onConflict: ['ra', 'turma_id', 'data_aula']
@@ -225,10 +226,10 @@ function Chamada() {
             <textarea
               value={observacoes[alunoObservando] || ''}
               onChange={(e) =>
-                setObservacoes({
-                  ...observacoes,
-                  [alunoObservando]: e.target.value
-                })
+                setObservacoes(prev => ({
+                  ...prev,
+                  [String(alunoObservando)]: e.target.value
+                }))
               }
               style={{ width: '100%', height: 100 }}
             />
