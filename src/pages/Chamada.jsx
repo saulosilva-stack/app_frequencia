@@ -7,10 +7,6 @@ function Chamada() {
   const { turmaId } = useParams()
   const navigate = useNavigate()
 
-  // ================================
-  // ESTADOS
-  // ================================
-
   const [alunos, setAlunos] = useState([])
   const [presencas, setPresencas] = useState({})
   const [backupPresencas, setBackupPresencas] = useState(null)
@@ -22,17 +18,9 @@ function Chamada() {
   const [observacoes, setObservacoes] = useState({})
   const [alunoObservando, setAlunoObservando] = useState(null)
 
-  // ================================
-  // CARREGAMENTO
-  // ================================
-
   useEffect(() => {
     carregarDados()
-  }, [dataSelecionada])
-
-  // ================================
-  // BUSCAR DADOS
-  // ================================
+  }, [dataSelecionada, turmaId])
 
   async function carregarDados() {
 
@@ -40,7 +28,6 @@ function Chamada() {
 
     const dataHoje = dataSelecionada
 
-    // 1. alunos
     const { data: alunosData, error: alunosError } = await supabase
       .from('alunos')
       .select('*')
@@ -51,7 +38,6 @@ function Chamada() {
       return
     }
 
-    // 2. frequência
     const { data: freqData, error: freqError } = await supabase
       .from('frequencia')
       .select('*')
@@ -66,23 +52,18 @@ function Chamada() {
     setAlunos(alunosData)
 
     const estadoInicial = {}
-
     const obsInicial = {}
 
     alunosData.forEach((aluno) => {
       const registro = freqData.find((f) => f.ra === aluno.ra)
 
-      estadoInicial[aluno.ra] = registro ? registro.presente : null
-      obsInicial[aluno.ra] = registro ? registro.observacao || '' : ''
+      estadoInicial[String(aluno.ra)] = registro ? registro.presente : null
+      obsInicial[String(aluno.ra)] = registro ? registro.observacao || '' : ''
     })
 
     setPresencas(estadoInicial)
     setObservacoes(obsInicial)
   }
-
-  // ================================
-  // TOGGLE
-  // ================================
 
   function togglePresenca(ra) {
     setPresencas((prev) => ({
@@ -91,25 +72,15 @@ function Chamada() {
     }))
   }
 
-  // ================================
-  // SALVAR
-  // ================================
-
   async function salvarChamada() {
-
-    console.log('Salvando...')
 
     const dataHoje = dataSelecionada
 
-    // =========================
-    // pegar usuário logado
-    // =========================
     const { data: userData } = await supabase.auth.getUser()
     const user = userData.user
-    console.log('OBSERVACOES:', observacoes)
 
     for (const ra in presencas) {
-      console.log(ra, observacoes[ra])
+
       const valorFinal = presencas[ra] === null ? false : presencas[ra]
 
       const { error } = await supabase
@@ -137,10 +108,6 @@ function Chamada() {
     await carregarDados()
   }
 
-  // ================================
-  // RENDER
-  // ================================
-
   return (
     <div style={{ padding: 20 }}>
 
@@ -161,47 +128,70 @@ function Chamada() {
         Chamada — Turma {turmaId}
       </h2>
 
+      {/* CABEÇALHO */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '80px 1fr 120px 120px',
+        fontWeight: 'bold',
+        borderBottom: '2px solid #ccc',
+        padding: '8px'
+      }}>
+        <div>Presença</div>
+        <div>Aluno</div>
+        <div>RA</div>
+        <div>Ações</div>
+      </div>
+
+      {/* LISTA */}
       {alunos.map((aluno) => (
         <div
           key={aluno.ra}
           style={{
-            padding: '6px',
-            marginBottom: '4px',
+            display: 'grid',
+            gridTemplateColumns: '80px 1fr 120px 120px',
+            alignItems: 'center',
+            padding: '6px 8px',
+            borderBottom: '1px solid #eee',
             backgroundColor:
               presencas[aluno.ra] === true
                 ? '#d4edda'
                 : presencas[aluno.ra] === false
                 ? '#f8d7da'
-                : '#ffffff',
-            border: '1px solid #ccc',
-            borderRadius: '4px'
+                : '#fff'
           }}
         >
-          <input
-            type="checkbox"
-            checked={presencas[aluno.ra] === true}
-            onChange={() => togglePresenca(aluno.ra)}
-          />
 
-          <span style={{ marginLeft: '8px' }}>
-            {aluno.nome}
-          </span>
-          <button
-            onClick={() => setAlunoObservando(aluno.ra)}
-            style={{ marginLeft: '10px' }}
-            >
-            📝
-          </button>
-          <button
-            onClick={() => navigate(`/aluno/${aluno.ra}`)}
-            style={{ marginLeft: '10px' }}
-          >
-            📊
-          </button>
+          <div>
+            <input
+              type="checkbox"
+              checked={presencas[aluno.ra] === true}
+              onChange={() => togglePresenca(aluno.ra)}
+            />
+          </div>
+
+          <div style={{textAlign: 'left'}}>{aluno.nome}</div>
+          <div>{aluno.ra}</div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button 
+              title='Observação'
+              onClick={() => setAlunoObservando(aluno.ra)}>
+              📝
+            </button>
+
+            <button 
+              title='Relatório de Assiduidade'
+              onClick={() => navigate(`/aluno/${aluno.ra}`)}>
+              📊
+            </button>
+          </div>
+
         </div>
       ))}
 
       <br />
+
+      {/* MODAL */}
       {alunoObservando && (
         <div style={{
           position: 'fixed',
@@ -237,12 +227,13 @@ function Chamada() {
             <br /><br />
 
             <button onClick={() => setAlunoObservando(null)}>
-              Salvar
+              Fechar
             </button>
 
           </div>
         </div>
       )}
+
       <button
         onClick={() => {
           setBackupPresencas(presencas)
@@ -250,6 +241,10 @@ function Chamada() {
           alunos.forEach(a => todos[a.ra] = true)
           setPresencas(todos)
         }}
+        onMouseEnter={() => {
+
+        }
+        }
       >
         Marcar todos presentes
       </button>
@@ -281,6 +276,7 @@ function Chamada() {
       <button onClick={salvarChamada}>
         Salvar chamada
       </button>
+
     </div>
   )
 }
