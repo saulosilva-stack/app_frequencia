@@ -12,6 +12,12 @@ import RelatorioAluno from './pages/RelatorioAluno'
 // layout
 import Layout from './components/Layout'
 
+// proteção de rota
+import ProtectedRoute from './routes/ProtectedRoute'
+
+// hooks
+import useAutoLogout from './hooks/useAutoLogout'
+
 function App() {
 
   // ================================
@@ -21,17 +27,20 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   // ================================
+  // AUTO LOGOUT (AGORA CONTROLADO)
+  // ================================
+  useAutoLogout(session)
+
+  // ================================
   // VERIFICAR SESSÃO AO INICIAR
   // ================================
   useEffect(() => {
 
-    // pega sessão atual
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
     })
 
-    // escuta login / logout
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
@@ -58,33 +67,38 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* =========================
-            ROTA DE LOGIN (PÚBLICA)
-        ========================= */}
-        <Route path="/login" element={<Login />} />
+        {/* ROTA PÚBLICA */}
+        <Route
+          path="/login"
+          element={
+            session
+              ? <Navigate to="/" />
+              : <Login />
+          }
+        />
 
-        {/* =========================
-            ROTAS PROTEGIDAS
-        ========================= */}
-        {session ? (
-          <Route path="/" element={<Layout />}>
+        {/* ROTAS PROTEGIDAS */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
 
-            {/* página inicial */}
-            <Route index element={<Turmas />} />
+          <Route index element={<Turmas />} />
 
-            {/* chamada */}
-            <Route path="chamada/:turmaId" element={<Chamada />} />
+          <Route path="chamada/:turmaId" element={<Chamada />} />
 
-            {/* relatório de frequência*/}
-            <Route path="relatorio/:turmaId" element={<RelatorioFrequencia />} />
-            
-            {/* relatório de aluno*/}
-            <Route path="aluno/:ra" element={<RelatorioAluno />} />
-          </Route>
-        ) : (
-          /* qualquer rota sem login → volta pro login */
-          <Route path="*" element={<Navigate to="/login" />} />
-        )}
+          <Route path="relatorio/:turmaId" element={<RelatorioFrequencia />} />
+
+          <Route path="aluno/:ra" element={<RelatorioAluno />} />
+
+        </Route>
+
+        {/* FALLBACK */}
+        <Route path="*" element={<Navigate to="/login" />} />
 
       </Routes>
     </BrowserRouter>

@@ -17,30 +17,29 @@ function RelatorioAluno() {
 
   async function buscarDados() {
 
-    const { data, error } = await supabase
-      .rpc('relatorio_aluno', { ra_param: ra })
+    if (!ra) return
 
-    if (error) {
-      console.error(error)
+    const [relatorioRes, alunoRes] = await Promise.all([
+      supabase.rpc('relatorio_aluno', { ra_param: ra }),
+      supabase
+        .from('alunos')
+        .select('nome, turma_id')
+        .eq('ra', ra)
+        .maybeSingle()
+    ])
+
+    if (relatorioRes.error) {
+      console.error(relatorioRes.error)
       alert('Erro ao carregar relatório')
       return
     }
 
-    setDados(data || [])
-
-    // buscar aluno
-    const { data: alunoData, error: alunoError } = await supabase
-      .from('alunos')
-      .select('nome, turma_id')
-      .eq('ra', ra)
-      .single()
-
-    if (alunoError) {
-      console.error(alunoError)
-      return
+    if (alunoRes.error) {
+      console.error(alunoRes.error)
     }
 
-    setAluno(alunoData)
+    setDados(relatorioRes.data || [])
+    setAluno(alunoRes.data || null)
   }
 
   const colunas = [
