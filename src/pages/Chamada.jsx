@@ -79,29 +79,25 @@ function Chamada() {
     const { data: userData } = await supabase.auth.getUser()
     const user = userData.user
 
-    for (const ra in presencas) {
+    const payload = Object.keys(presencas).map((ra) => ({
+      ra,
+      turma_id: turmaId,
+      data_aula: dataHoje,
+      presente: presencas[ra] ?? false,
+      responsavel: user.email,
+      observacao: observacoes[String(ra)] ?? null
+    }))
 
-      const valorFinal = presencas[ra] === null ? false : presencas[ra]
+    const { error } = await supabase
+      .from('frequencia')
+      .upsert(payload, {
+        onConflict: ['ra', 'turma_id', 'data_aula']
+      })
 
-      const { error } = await supabase
-        .from('frequencia')
-        .upsert(
-          {
-            ra,
-            turma_id: turmaId,
-            data_aula: dataHoje,
-            presente: valorFinal,
-            responsavel: user.email,
-            observacao: observacoes[String(ra)] ?? null
-          },
-          {
-            onConflict: ['ra', 'turma_id', 'data_aula']
-          }
-        )
-
-      if (error) {
-        console.error(error)
-      }
+    if (error) {
+      console.error(error)
+      alert('Erro ao salvar chamada')
+      return
     }
 
     alert('Chamada salva!')

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useParams, useNavigate } from 'react-router-dom'
-import RelatorioBase from '../components/RelatorioBase'
 import RelatorioBaseTS from '../components/RelatorioBaseTS'
 
 function RelatorioFrequencia() {
@@ -17,11 +16,14 @@ function RelatorioFrequencia() {
 
   async function buscar() {
 
+    if (!turmaId) return
+
     const { data, error } = await supabase
       .rpc('relatorio_frequencia', { turma_id_param: turmaId })
 
     if (error) {
       console.error(error)
+      alert('Erro ao carregar relatório')
       return
     }
 
@@ -45,23 +47,21 @@ function RelatorioFrequencia() {
       campo: 'frequencia_percentual',
       label: '%',
 
-      // customização visual
       render: (item) => `${item.frequencia_percentual}%`,
 
-      // regra de destaque
       highlight: (item) => item.frequencia_percentual < 75
     }
   ]
 
   return (
-    <div>
+    <div style={{ padding: 20 }}>
 
       <button onClick={() => navigate('/')}>
         ← Voltar
       </button>
 
       <RelatorioBaseTS
-        titulo={`Relatório ${turmaId}`}
+        titulo={`Relatório da turma ${turmaId}`}
         dados={dados}
         colunas={colunas}
       />
