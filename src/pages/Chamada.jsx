@@ -18,13 +18,39 @@ function Chamada() {
   const [observacoes, setObservacoes] = useState({})
   const [alunoObservando, setAlunoObservando] = useState(null)
 
+  const [role, setRole] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const podeEditar = role === 'admin' || role === 'coordenador'
+
   useEffect(() => {
-    carregarDados()
+    iniciar()
   }, [dataSelecionada, turmaId])
 
-  async function carregarDados() {
+  async function iniciar() {
+    setLoading(true)
+    await Promise.all([
+      carregarRole(),
+      carregarDados()
+    ])
+    setLoading(false)
+  }
 
-    setPresencas({})
+  async function carregarRole() {
+    const { data, error } = await supabase
+      .from('usuarios_permissoes')
+      .select('role')
+      .maybeSingle()
+
+    if (error) {
+      console.error('Erro ao buscar role:', error)
+      return
+    }
+
+    setRole(data?.role || null)
+  }
+
+  async function carregarDados() {
 
     const dataHoje = dataSelecionada
 
@@ -79,29 +105,74 @@ function Chamada() {
     const { data: userData } = await supabase.auth.getUser()
     const user = userData.user
 
-    const payload = Object.keys(presencas).map((ra) => ({
-      ra,
-      turma_id: turmaId,
-      data_aula: dataHoje,
-      presente: presencas[ra] ?? false,
-      responsavel: user.email,
-      observacao: observacoes[String(ra)] ?? null
-    }))
-
-    const { error } = await supabase
+    const { data: existentes } = await supabase
       .from('frequencia')
-      .upsert(payload, {
-        onConflict: ['ra', 'turma_id', 'data_aula']
-      })
+      .select('ra')
+      .eq('turma_id', turmaId)
+      .eq('data_aula', dataHoje)
 
-    if (error) {
-      console.error(error)
-      alert('Erro ao salvar chamada')
-      return
+    const rasExistentes = new Set((existentes || []).map(e => e.ra))
+
+    let teveErro = false
+
+    for (const ra in presencas) {
+
+      const valorFinal = presencas[ra] === null ? false : presencas[ra]
+
+      const registro = {
+        ra,
+        turma_id: turmaId,
+        data_aula: dataHoje,
+        presente: valorFinal,
+        responsavel: user.email,
+        observacao: observacoes[String(ra)] ?? null
+      }
+
+      const jaExiste = rasExistentes.has(ra)
+
+      // INSERT
+      if (!jaExiste) {
+        const { error } = await supabase
+          .from('frequencia')
+          .insert(registro)
+
+        if (error) {
+          console.error('Erro ao inserir:', error)
+          teveErro = true
+        }
+      }
+
+      // UPDATE
+      if (jaExiste && podeEditar) {
+        const { error } = await supabase
+          .from('frequencia')
+          .update(registro)
+          .eq('ra', ra)
+          .eq('turma_id', turmaId)
+          .eq('data_aula', dataHoje)
+
+        if (error) {
+          console.error('Erro ao atualizar:', error)
+          teveErro = true
+        }
+      }
     }
 
-    alert('Chamada salva!')
+    if (teveErro) {
+      alert('Alguns registros não puderam ser alterados (permissão).')
+    } else {
+      alert('Chamada salva com sucesso!')
+    }
+
     await carregarDados()
+
+  }
+
+  // ================================
+  // LOADING
+  // ================================
+  if (loading) {
+    return <div style={{ padding: 20 }}>Carregando...</div>
   }
 
   return (
@@ -139,51 +210,53 @@ function Chamada() {
       </div>
 
       {/* LISTA */}
-      {alunos.map((aluno) => (
-        <div
-          key={aluno.ra}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '80px 1fr 120px 120px',
-            alignItems: 'center',
-            padding: '6px 8px',
-            borderBottom: '1px solid #eee',
-            backgroundColor:
-              presencas[aluno.ra] === true
-                ? '#d4edda'
-                : presencas[aluno.ra] === false
-                ? '#f8d7da'
-                : '#fff'
-          }}
-        >
+      {alunos.map((aluno) => {
 
-          <div>
-            <input
-              type="checkbox"
-              checked={presencas[aluno.ra] === true}
-              onChange={() => togglePresenca(aluno.ra)}
-            />
+        const jaExiste = presencas[aluno.ra] !== null
+
+        return (
+          <div
+            key={aluno.ra}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '80px 1fr 120px 120px',
+              alignItems: 'center',
+              padding: '6px 8px',
+              borderBottom: '1px solid #eee',
+              backgroundColor:
+                presencas[aluno.ra] === true
+                  ? '#d4edda'
+                  : presencas[aluno.ra] === false
+                  ? '#f8d7da'
+                  : '#fff'
+            }}
+          >
+
+            <div>
+              <input
+                type="checkbox"
+                disabled={!podeEditar && jaExiste}
+                checked={presencas[aluno.ra] === true}
+                onChange={() => togglePresenca(aluno.ra)}
+              />
+            </div>
+
+            <div style={{ textAlign: 'left' }}>{aluno.nome}</div>
+            <div>{aluno.ra}</div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setAlunoObservando(aluno.ra)}>
+                📝
+              </button>
+
+              <button onClick={() => navigate(`/aluno/${aluno.ra}`)}>
+                📊
+              </button>
+            </div>
+
           </div>
-
-          <div style={{textAlign: 'left'}}>{aluno.nome}</div>
-          <div>{aluno.ra}</div>
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button 
-              title='Observação'
-              onClick={() => setAlunoObservando(aluno.ra)}>
-              📝
-            </button>
-
-            <button 
-              title='Relatório de Assiduidade'
-              onClick={() => navigate(`/aluno/${aluno.ra}`)}>
-              📊
-            </button>
-          </div>
-
-        </div>
-      ))}
+        )
+      })}
 
       <br />
 
@@ -237,10 +310,6 @@ function Chamada() {
           alunos.forEach(a => todos[a.ra] = true)
           setPresencas(todos)
         }}
-        onMouseEnter={() => {
-
-        }
-        }
       >
         Marcar todos presentes
       </button>
