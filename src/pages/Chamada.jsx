@@ -187,23 +187,29 @@ function Chamada() {
     // CRIAR CHAMADA SE NÃO EXISTIR
     // ========================================
 
+    let chamadaAtual = chamada
+
     if (!chamada) {
 
-      const { error: chamadaError } = await supabase
-        .from('chamadas')
-        .insert({
-          turma_id: turmaId,
-          data_aula: dataHoje,
-          criada_por: user.email,
-          finalizada: false
-        })
+  const { data: novaChamada, error: chamadaError } = await supabase
+      .from('chamadas')
+      .insert({
+        turma_id: turmaId,
+        data_aula: dataHoje,
+        criada_por: user.email,
+        finalizada: false
+      })
+      .select()
+      .single()
 
-      if (chamadaError) {
-        console.error(chamadaError)
-        alert('Erro ao criar chamada')
-        return
-      }
+    if (chamadaError) {
+      console.error(chamadaError)
+      alert('Erro ao criar chamada')
+      return
     }
+
+    chamadaAtual = novaChamada
+  }
 
     // ========================================
     // SALVAR FREQUÊNCIAS
@@ -224,7 +230,8 @@ function Chamada() {
         data_aula: dataHoje,
         presente: valorFinal,
         responsavel: user.email,
-        observacao: observacoes[String(ra)] ?? null
+        observacao: observacoes[String(ra)] ?? null,
+        chamada_id: chamadaAtual.id
       }
 
       const { error } = await supabase
