@@ -37,9 +37,16 @@ function Chamada() {
   }
 
   async function carregarRole() {
+    // 1. Pega o usuário logado
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return
+
+    // 2. Filtra a permissão pelo ID desse usuário
     const { data, error } = await supabase
       .from('usuarios_permissoes')
       .select('role')
+      .eq('id', user.id) // OU 'user_id', dependendo do nome da sua coluna
       .maybeSingle()
 
     if (error) {
@@ -49,6 +56,7 @@ function Chamada() {
 
     setRole(data?.role || null)
   }
+
 
   async function carregarDados() {
 
@@ -92,9 +100,10 @@ function Chamada() {
   }
 
   function togglePresenca(ra) {
+    const key = String(ra);
     setPresencas((prev) => ({
       ...prev,
-      [ra]: prev[ra] === true ? false : true
+      [key]: prev[key] === true ? false : true
     }))
   }
 
