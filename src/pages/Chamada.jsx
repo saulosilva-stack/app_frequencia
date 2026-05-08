@@ -32,7 +32,7 @@ function Chamada() {
   // PERMISSÃO
   // ============================================
 
-  const chamadaFinalizada = chamada?.finalizada === true
+  const chamadaFinalizada = chamada?.status === 'fechada'
 
   const podeEditar =
     role === 'admin' ||
@@ -197,7 +197,7 @@ function Chamada() {
         turma_id: turmaId,
         data_aula: dataHoje,
         criado_por: user.email,
-        finalizada: false
+        status: 'aberta'
       })
       .select()
       .single()
@@ -269,7 +269,7 @@ function Chamada() {
     const { error } = await supabase
       .from('chamadas')
       .update({
-        finalizada: true
+        status: 'fechada'
       })
       .eq('id', chamada.id)
 
@@ -323,8 +323,8 @@ function Chamada() {
 
         <strong>Status:</strong>{' '}
 
-        {chamadaFinalizada
-          ? 'Finalizada'
+        {chamada?.status === 'fechada'
+          ? 'Fechada'
           : 'Aberta'}
       </div>
 
