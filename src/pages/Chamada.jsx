@@ -37,24 +37,16 @@ function Chamada() {
   }
 
   async function carregarRole() {
-    // 1. Pega o usuário logado
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return
 
-    // 2. Filtra a permissão pelo ID desse usuário
     const { data, error } = await supabase
-      .from('usuarios_permissoes')
-      .select('role')
-      .eq('id', user.id) // OU 'user_id', dependendo do nome da sua coluna
-      .maybeSingle()
+      .rpc('get_user_role')
 
     if (error) {
       console.error('Erro ao buscar role:', error)
       return
     }
 
-    setRole(data?.role || null)
+    setRole(data || null)
   }
 
 
