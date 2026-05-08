@@ -196,7 +196,7 @@ function Chamada() {
       .insert({
         turma_id: turmaId,
         data_aula: dataHoje,
-        criado_por: user.email,
+        criado_por: user.id,
         status: 'aberta'
       })
       .select()
